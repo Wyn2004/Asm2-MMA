@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Product } from "../types";
+import { FavoriteButton } from "./FavoriteButton";
 
 interface ProductListProps {
   products: Product[];
@@ -31,11 +32,28 @@ export const ProductList: React.FC<ProductListProps> = ({
       onPress={() => router.push(`/product/${item.id}`)}
       activeOpacity={0.7}
     >
-      <Image
-        source={{ uri: item.thumbnail }}
-        className="w-full h-32 rounded-lg mb-2"
-        resizeMode="cover"
-      />
+      {/* Product Image with Favorite Button */}
+      <View className="relative">
+        <Image
+          source={{ uri: item.thumbnail }}
+          className="w-full h-32 rounded-lg mb-2"
+          resizeMode="cover"
+        />
+        {/* Favorite Button positioned on top right of image */}
+        <View className="absolute top-2 right-2">
+          <FavoriteButton
+            product={item}
+            size="small"
+            style={{
+              backgroundColor: "rgba(255, 255, 255, 0.9)",
+              borderRadius: 15,
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+            }}
+          />
+        </View>
+      </View>
+
       <Text
         className="text-sm font-semibold text-gray-900 mb-1"
         numberOfLines={2}

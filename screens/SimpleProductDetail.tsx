@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FavoriteButton } from "../components/FavoriteButton";
 import { useCart } from "../context/CartContext";
 import { useProduct } from "../hooks/useProduct";
 
@@ -53,47 +54,60 @@ export const SimpleProductDetail = () => {
     );
   }
 
-  if (error || !product) {
+  if (error) {
     return (
-      <View className="flex-1 justify-center items-center bg-white">
-        <Text className="text-red-500 text-center mb-4">
-          {error || "Product not found"}
+      <View className="flex-1 justify-center items-center bg-white p-4">
+        <Text className="text-red-500 text-center text-lg mb-4">{error}</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="bg-blue-600 px-6 py-3 rounded-lg"
+        >
+          <Text className="text-white font-semibold">Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!product) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white p-4">
+        <Text className="text-gray-500 text-center text-lg mb-4">
+          Product not found
         </Text>
         <TouchableOpacity
           onPress={() => router.back()}
           className="bg-blue-600 px-6 py-3 rounded-lg"
-          activeOpacity={0.8}
         >
-          <Text className="text-white font-medium">Go Back</Text>
+          <Text className="text-white font-semibold">Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   const images =
-    product.images && product.images.length > 0
-      ? product.images
-      : [product.thumbnail];
+    product.images?.length > 0 ? product.images : [product.thumbnail];
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-1 bg-white">
+      <View className="flex-1">
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-3 bg-white shadow-md">
+        <View className="flex-row items-center justify-between p-4 bg-white border-b border-gray-200">
           <TouchableOpacity
             onPress={() => router.back()}
-            className="p-2"
-            activeOpacity={0.7}
+            className="w-10 h-10 rounded-full bg-gray-100 items-center justify-center"
           >
-            <Text className="text-blue-600 text-lg">← Back</Text>
+            <Text className="text-gray-600 font-bold text-lg">←</Text>
           </TouchableOpacity>
+
           <Text
-            className="flex-1 text-lg font-semibold text-gray-900 text-center"
+            className="text-lg font-semibold text-gray-900"
             numberOfLines={1}
           >
             {product.title}
           </Text>
-          <View className="w-12" />
+
+          {/* Favorite Button in Header */}
+          <FavoriteButton product={product} size="small" />
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -222,8 +236,14 @@ export const SimpleProductDetail = () => {
           </View>
         </ScrollView>
 
-        {/* Add to Cart Button */}
+        {/* Action Buttons */}
         <View className="p-4 bg-white border-t border-gray-200">
+          {/* Favorite Button with Text */}
+          <View className="mb-3">
+            <FavoriteButton product={product} size="large" showText={true} />
+          </View>
+
+          {/* Add to Cart Button */}
           <TouchableOpacity
             onPress={handleAddToCart}
             className={`py-4 rounded-lg ${
