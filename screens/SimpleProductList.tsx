@@ -9,7 +9,7 @@ import { ApiService } from "../services/api";
 import { Product } from "../types";
 
 export const SimpleProductList: React.FC = () => {
-  const { cart, addToCart } = useCart();
+  const { cart, addToCart, isLoading: cartLoading } = useCart();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export const SimpleProductList: React.FC = () => {
   useEffect(() => {
     loadProducts();
     loadCategories();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Cleanup timeout on unmount
@@ -50,32 +50,42 @@ export const SimpleProductList: React.FC = () => {
   };
 
   const loadProducts = async (
+    reset: boolean = true,
     search?: string,
-    category?: string,
-    append: boolean = false
+    category?: string
   ) => {
     try {
-      if (!append) {
-        if (products.length === 0) {
-          setLoading(true);
-        }
+      if (reset) {
+        setLoading(true);
+        setError(null);
       } else {
         setLoadingMore(true);
       }
-      setError(null);
 
-      const skip = append ? products.length : 0;
-      const response = await ApiService.getProducts(20, skip, search, category);
+      const skip = reset ? 0 : products.length;
+      const limit = 20;
 
-      if (append) {
-        setProducts((prev) => [...prev, ...response.products]);
-      } else {
+      const response = await ApiService.getProducts(
+        limit,
+        skip,
+        search,
+        category
+      );
+
+      if (reset) {
         setProducts(response.products);
+      } else {
+        setProducts((prev) => [...prev, ...response.products]);
       }
 
-      setHasMore(response.products.length === 20);
+      setHasMore(response.products.length === limit);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load products";
+      setError(errorMessage);
+      if (reset) {
+        setProducts([]);
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -83,11 +93,9 @@ export const SimpleProductList: React.FC = () => {
   };
 
   const handleSearch = (query: string) => {
-    if (query.trim()) {
-      loadProducts(query.trim(), selectedCategory);
-    } else {
-      loadProducts(undefined, selectedCategory);
-    }
+    setSearchQuery(query);
+    setSelectedCategory("");
+    loadProducts(true, query);
   };
 
   const handleSearchInputChange = (query: string) => {
@@ -95,68 +103,68 @@ export const SimpleProductList: React.FC = () => {
 
     if (searchTimeout) {
       clearTimeout(searchTimeout);
-      setSearchTimeout(null);
     }
 
-    const newTimeout = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       if (query.trim()) {
-        loadProducts(query.trim(), selectedCategory);
-      } else if (query === "") {
-        loadProducts(undefined, selectedCategory);
+        handleSearch(query);
+      } else {
+        setSelectedCategory("");
+        loadProducts(true);
       }
-    }, 300);
+    }, 500);
 
-    setSearchTimeout(newTimeout);
+    setSearchTimeout(timeoutId);
   };
 
   const handleClearSearch = () => {
     setSearchQuery("");
-    loadProducts(undefined, selectedCategory);
+    setSelectedCategory("");
+    loadProducts(true);
   };
 
   const handleCategoryChange = (category: string) => {
-    const normalizedCategory = category.toLowerCase();
-    setSelectedCategory(normalizedCategory);
-    loadProducts(searchQuery || undefined, normalizedCategory);
-  };
-
-  const loadMoreProducts = () => {
-    if (!loadingMore && hasMore && !loading) {
-      loadProducts(searchQuery || undefined, selectedCategory, true);
-    }
+    setSelectedCategory(category);
+    setSearchQuery("");
+    loadProducts(true, undefined, category);
   };
 
   const handleEndReached = () => {
-    loadMoreProducts();
+    if (!loadingMore && hasMore && !loading) {
+      loadProducts(false, searchQuery, selectedCategory);
+    }
   };
 
-  if (loading) {
+  const handleAddToCart = (product: Product) => {
+    addToCart(product);
+  };
+
+  // Show loading indicator if cart is still loading
+  if (cartLoading) {
     return (
-      <View className="flex-1 justify-center items-center p-5">
+      <View className="flex-1 justify-center items-center bg-gray-50">
         <ActivityIndicator size="large" color="#3b82f6" />
-        <Text className="mt-3 text-base text-gray-500">
-          Loading products...
-        </Text>
+        <Text className="mt-4 text-gray-500">Loading...</Text>
       </View>
     );
   }
 
-  if (error) {
+  if (error && products.length === 0) {
     return (
-      <View className="flex-1 justify-center items-center p-5">
-        <Text className="text-red-500 text-center mb-4 text-base">{error}</Text>
+      <View className="flex-1 justify-center items-center bg-gray-50 p-4">
+        <Text className="text-red-500 text-center text-lg mb-4">{error}</Text>
         <TouchableOpacity
-          className="bg-blue-600 px-6 py-3 rounded-lg"
           onPress={() => loadProducts()}
+          className="bg-blue-600 px-6 py-3 rounded-lg"
         >
-          <Text className="text-white font-semibold text-base">Try Again</Text>
+          <Text className="text-white font-semibold">Try Again</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-100">
+    <View className="flex-1 bg-gray-50">
       <Header totalItems={cart.totalItems} />
       <SearchBar
         searchQuery={searchQuery}
@@ -164,19 +172,24 @@ export const SimpleProductList: React.FC = () => {
         handleClearSearch={handleClearSearch}
         handleSearch={handleSearch}
       />
-      {categories.length > 0 && (
-        <CategoryFilter
-          categories={categories}
-          selectedCategory={selectedCategory}
-          handleCategoryChange={handleCategoryChange}
+      <CategoryFilter
+        categories={categories}
+        selectedCategory={selectedCategory}
+        handleCategoryChange={handleCategoryChange}
+      />
+      {loading && products.length === 0 ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text className="mt-4 text-gray-500">Loading products...</Text>
+        </View>
+      ) : (
+        <ProductList
+          products={products}
+          loadingMore={loadingMore}
+          handleEndReached={handleEndReached}
+          addToCart={handleAddToCart}
         />
       )}
-      <ProductList
-        products={products}
-        loadingMore={loadingMore}
-        handleEndReached={handleEndReached}
-        addToCart={addToCart}
-      />
     </View>
   );
 };

@@ -36,6 +36,9 @@ const favoritesReducer = (
     case "SET_FAVORITES":
       return { ...state, favorites: action.payload };
 
+    case "SET_LOADING":
+      return { ...state, isLoading: action.payload };
+
     case "ADD_FAVORITE": {
       const exists = state.favorites.some(
         (item) => item.id === action.payload.id
@@ -52,9 +55,6 @@ const favoritesReducer = (
 
     case "CLEAR_FAVORITES":
       return { ...state, favorites: [] };
-
-    case "SET_LOADING":
-      return { ...state, isLoading: action.payload };
 
     default:
       return state;
@@ -107,6 +107,10 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({
   };
 
   const addToFavorites = async (product: Product) => {
+    // Check if already exists
+    const exists = state.favorites.some((item) => item.id === product.id);
+    if (exists) return;
+
     dispatch({ type: "ADD_FAVORITE", payload: product });
     const newFavorites = [...state.favorites, product];
     await saveFavorites(newFavorites);
